@@ -59,6 +59,32 @@ the 5 minutes after 11:10 or 20:00, and a snooze expires within 5 minutes of its
 30 minutes being up. Tighten the schedule to `* * * * *` if that ever matters —
 the function returns early when nothing is due, so the extra runs are cheap.
 
+## Duplicate push subscriptions
+
+Every nudge is sent to every row in `push_subscriptions`, so orphaned rows mean
+duplicate sends. The notification `tag` collapses them into one visible alert
+per device, which is why this can pile up unnoticed — seven rows accumulated for
+a single phone before anyone spotted it.
+
+The browser mints a new subscription whenever it rotates one (service worker
+updates, key changes). `sw.js` handles `pushsubscriptionchange`, sends the
+replacement along with an `oldEndpoint`, and `subscribe` deletes that old row —
+so rotations no longer leave orphans behind.
+
+To check the current state, and drop any endpoint the push service has stopped
+recognising:
+
+```bash
+curl -s -X POST "https://eyacjldyjxojzpxslkzh.supabase.co/functions/v1/prune-subscriptions?dry=1" -H "Authorization: Bearer $SUPABASE_ANON_KEY"
+```
+
+`dry=1` only reports. Without it, endpoints returning 404/410 are removed;
+anything still live is kept. Note this sends a real notification to every live
+device — that is the only way to tell a working endpoint from a dead one.
+
+Clearing the table entirely is safe: the app re-registers the current device on
+its next load. Nothing is delivered in the meantime, so reopen the app afterwards.
+
 ## Follow-up work
 
 ### Add authentication (agreed, not yet done)
@@ -78,6 +104,13 @@ Supabase magic-link auth, a `user_id` column on `lesson_log` and
 `using (true)` ones. Contained, but it touches every function and the client, so
 it is roughly the size of everything built so far. Until then, treat the app URL
 as semi-private and do not post it publicly.
+
+### Remove the one-off `prune-subscriptions` function
+
+It was deployed to identify dead push endpoints and is not part of the running
+system. It requires the anon key and only ever deletes endpoints the push
+service has already rejected, but it is still an endpoint that can fire
+notifications — delete it in the Supabase dashboard once it is no longer needed.
 
 ### Retire the superseded `app` edge function
 

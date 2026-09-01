@@ -30,6 +30,13 @@ Deno.serve(async (req) => {
     { onConflict: "endpoint" }
   );
 
+  // When the browser rotates a subscription it tells us which endpoint it
+  // replaced. Drop that one, or it lingers as a live orphan and every nudge
+  // gets sent to it as well as to the real one.
+  if (typeof sub.oldEndpoint === "string" && sub.oldEndpoint && sub.oldEndpoint !== endpoint) {
+    await supabase.from("push_subscriptions").delete().eq("endpoint", sub.oldEndpoint);
+  }
+
   return new Response(JSON.stringify({ ok: true }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
