@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Lesson Log</title>
+<link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#111111" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, system-ui, sans-serif;
+    background: #f4f3ef;
+    color: #1a1a1a;
+    padding: 20px 16px 40px;
+  }
+  h1 { font-size: 20px; font-weight: 600; margin: 4px 0 20px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .stat { background: #fff; border-radius: 10px; padding: 12px; }
+  .stat p:first-child { font-size: 12px; color: #666; margin: 0 0 4px; }
+  .stat p:last-child { font-size: 20px; font-weight: 600; margin: 0; }
+  .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
+  .card .when { font-size: 12px; color: #888; margin: 0 0 10px; }
+  .card input[type=text] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 10px; }
+  .row { display: flex; gap: 8px; }
+  button { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: #fff; font-size: 13px; font-weight: 500; }
+  button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .push-banner { background: #fff3d6; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; font-size: 13px; display: none; }
+  .push-banner button { margin-top: 8px; }
+  .log-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+  .log-row:last-child { border-bottom: none; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .list-header { font-size: 12px; color: #666; margin: 20px 0 8px; }
+</style>
+</head>
+<body>
+  <h1>Lesson log</h1>
+  <div id="push-banner" class="push-banner">
+    Notifications aren't enabled yet - turn them on to get nudged if a session goes unlogged.
+    <button id="enable-push" class="primary">Enable notifications</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><p>Streak</p><p id="streak">0</p></div>
+    <div class="stat"><p>Last 14 days</p><p id="week">0/28</p></div>
+    <div class="stat"><p>Total done</p><p id="total">0</p></div>
+  </div>
+
+  <div class="card">
+    <h2>Morning session</h2>
+    <p class="when">Math &mdash; 10:00, nudge at 11:10</p>
+    <input type="text" id="morning-note" placeholder="What did you cover? (optional)" />
+    <div class="row">
+      <button id="morning-done" class="primary">Mark done</button>
+      <button id="morning-cancel">Mark incomplete</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Evening session</h2>
+    <p class="when">CS &mdash; 17:30, nudge at 20:00</p>
+    <input type="text" id="evening-note" placeholder="What did you cover? (optional)" />
+    <div class="row">
+      <button id="evening-done" class="primary">Mark done</button>
+      <button id="evening-cancel">Mark incomplete</button>
+    </div>
+  </div>
+
+  <p class="list-header">Last 14 days</p>
+  <div class="card" id="log-list" style="padding: 8px 16px;"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
