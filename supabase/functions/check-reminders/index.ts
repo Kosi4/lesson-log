@@ -116,8 +116,14 @@ Deno.serve(async () => {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           payload,
-          // Expire the push rather than letting a stale nag arrive tomorrow.
-          { TTL: 4 * 60 * 60 }
+          {
+            // Expire the push rather than letting a stale nag arrive tomorrow.
+            TTL: 4 * 60 * 60,
+            // Android defers normal-urgency pushes while the device is dozing,
+            // so the nudge only surfaces when the app is next opened — useless
+            // for a reminder. High urgency asks to wake the device instead.
+            urgency: "high",
+          }
         );
         delivered++;
       } catch (err) {

@@ -48,9 +48,22 @@ Work down this list:
    dashboard, or `query_logs`. A push that fails with HTTP 410 means the browser
    revoked the subscription; the function prunes that row automatically and the
    app re-registers on next load.
-5. **Is the phone's battery optimisation killing Chrome?** Android can suppress
-   background push for aggressively optimised apps. Exclude Chrome if nudges are
-   intermittent.
+5. **Is Android holding the message?** This is the most likely cause by far,
+   and the hardest to see: every server-side log looks perfectly healthy while
+   nothing reaches the phone.
+
+   The tell is a nudge that **arrives the moment the app is opened** rather than
+   when it was sent. That is Doze deferring the message, not a delivery failure.
+   Pushes go out with `urgency: "high"` so Android is asked to wake the device,
+   but aggressive OEM battery management can still override that.
+
+   The fix is on the phone, not in the code:
+   - Settings → Apps → **Chrome** → Battery → **Unrestricted**
+   - Same again for the installed **Lesson Log** app if it is listed separately
+     (an installed PWA is a WebAPK and some OEMs treat it as its own app)
+   - Turn off any "adaptive battery", "sleeping apps", or "auto-start" control
+     that lists either of them
+   - Data Saver off, or Chrome exempted from it
 
 ## Timing precision
 
