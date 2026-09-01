@@ -28,6 +28,15 @@ self.addEventListener("push", (event) => {
     badge: "./icon.png",
     tag: "session-" + data.session + "-" + data.date,
     data: { session: data.session, date: data.date },
+    // A reminder that sits silently in the status bar is useless. Vibration and
+    // renotify are what push Android to treat this as a high-importance alert
+    // and float it over whatever is on screen, rather than filing it quietly.
+    // renotify only applies because a tag is set: without it, a notification
+    // replacing one with the same tag arrives with no alert at all.
+    vibrate: [300, 120, 300],
+    renotify: true,
+    silent: false,
+    requireInteraction: true,
     actions: [
       { action: "done", title: "Mark done" },
       { action: "snooze", title: "Snooze 30m" },
@@ -37,19 +46,47 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+/**
+ * Post a notification action, retrying a few times. The phone is often on a
+ * flaky connection at exactly the moment a nudge is tapped, and a swallowed
+ * failure here is invisible: the notification disappears and nothing is saved,
+ * so the tap looks like it worked. If it really cannot be saved, say so rather
+ * than pretend.
+ */
+async function sendAction(info, action) {
+  const body = JSON.stringify({ date: info.date, session: info.session, action });
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(SESSION_ACTION_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      if (res.ok) return;
+    } catch (err) {
+      // fall through to retry
+    }
+    await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+  }
+
+  await self.registration.showNotification("Couldn't save that", {
+    body: "Tap to open Lesson Log and log the session yourself.",
+    icon: "./icon.png",
+    badge: "./icon.png",
+    tag: "action-failed",
+    requireInteraction: true,
+    vibrate: [300, 120, 300],
+  });
+}
+
 self.addEventListener("notificationclick", (event) => {
   const notification = event.notification;
   const info = notification.data || {};
   notification.close();
 
   if (event.action === "done" || event.action === "snooze" || event.action === "cancel") {
-    event.waitUntil(
-      fetch(SESSION_ACTION_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: info.date, session: info.session, action: event.action }),
-      }).catch(() => {})
-    );
+    event.waitUntil(sendAction(info, event.action));
     return;
   }
 

@@ -72,6 +72,30 @@ the 5 minutes after 11:10 or 20:00, and a snooze expires within 5 minutes of its
 30 minutes being up. Tighten the schedule to `* * * * *` if that ever matters —
 the function returns early when nothing is due, so the extra runs are cheap.
 
+## The nudge arrives but does not pop up
+
+A reminder filed silently into the status bar is worth very little. Two things
+decide whether Android floats it over the screen:
+
+1. **What the notification asks for.** `sw.js` sets `vibrate`, `renotify: true`
+   and `requireInteraction: true`. `renotify` matters more than it looks:
+   because the notification carries a `tag`, one that replaces an existing
+   notification with the same tag arrives with *no alert at all* unless
+   `renotify` is set.
+2. **What the OS channel allows**, which overrides everything above. This is the
+   real control:
+   - Installed as a home-screen app: Settings → Apps → **Lesson Log** →
+     Notifications → set the channel to **Urgent / "Pop on screen"**.
+   - In a browser tab: Settings → Apps → **Chrome** → Notifications → find
+     `lesson-log-indol.vercel.app` → same setting.
+
+   Android remembers a per-channel importance once it is set, and silently
+   downgrading a channel the user has dismissed a few times is normal behaviour.
+
+A web push cannot go further than a heads-up notification: full-screen alarm
+style alerts need a native app with a full-screen intent, which is not available
+to a PWA. Sound, vibration and an on-screen banner are the ceiling here.
+
 ## Duplicate push subscriptions
 
 Every nudge is sent to every row in `push_subscriptions`, so orphaned rows mean
