@@ -4,3 +4,10 @@ node_modules/
 .env.local
 .vercel
 .env*
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
