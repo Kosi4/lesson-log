@@ -4,14 +4,15 @@ A personal daily check-in for the two study sessions on my calendar. Tick each
 session off, jot what I covered, and get nudged if a session goes unlogged —
 so consistency is measurable instead of a feeling.
 
-**Live app:** not yet hosted — see [docs/setup.md](docs/setup.md#hosting).
+**Live app:** https://lesson-log-indol.vercel.app
 
 The UI cannot be served from Supabase: Supabase rewrites `text/html` to
 `text/plain` on `functions/v1` URLs, so the page arrives as source text and can
 neither install nor register a service worker. The front end therefore lives in
-`web/` and needs a static host. The four API functions are unaffected.
+`web/` and is hosted on Vercel, which serves it as real HTML. The four API
+functions stay on Supabase and are unaffected.
 
-Once hosted, open the URL on the phone and on the laptop. Both talk to the same
+Open the URL on the phone and on the laptop. Both talk to the same
 database, so a tick on one shows up on the other. On Android, add it to the home
 screen (Chrome menu → *Add to Home screen*) so it launches like an app and can
 receive notifications with the browser closed.
