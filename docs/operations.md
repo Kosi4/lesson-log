@@ -59,7 +59,9 @@ the 5 minutes after 11:10 or 20:00, and a snooze expires within 5 minutes of its
 30 minutes being up. Tighten the schedule to `* * * * *` if that ever matters —
 the function returns early when nothing is due, so the extra runs are cheap.
 
-## Known limitation: the app is unauthenticated
+## Follow-up work
+
+### Add authentication (agreed, not yet done)
 
 `lesson_log` and `push_subscriptions` have RLS enabled but with a
 `using (true) with check (true)` policy, and the anon key is embedded in
@@ -70,12 +72,21 @@ the function returns early when nothing is due, so the extra runs are cheap.
 - The VAPID private key is **not** exposed — `app_secrets` has no policy at all,
   so only the edge functions can read it.
 
-For a personal study log that is a deliberate trade rather than an oversight: the
-alternative was building a login flow larger than the rest of the app. Treat the
-URL as semi-private and do not post it publicly. If it ever needs locking down,
-the cheapest real fix is Supabase magic-link auth plus a `user_id` column and
-`user_id = auth.uid()` policies — a contained change, but it does touch every
-function.
+This is accepted for now but **is scheduled to be fixed**. The intended change:
+Supabase magic-link auth, a `user_id` column on `lesson_log` and
+`push_subscriptions`, and `user_id = auth.uid()` policies replacing the
+`using (true)` ones. Contained, but it touches every function and the client, so
+it is roughly the size of everything built so far. Until then, treat the app URL
+as semi-private and do not post it publicly.
+
+### Remove the leftover `ctype-probe` storage bucket
+
+An empty public storage bucket named `ctype-probe` was created while testing
+whether Supabase Storage could host the front end, and holds one orphan metadata
+row (`probe.html`) with no file behind it. Requests to it return HTTP 400.
+Postgres blocks deleting storage rows directly, so it has to go via the Storage
+API or the dashboard: Storage → `ctype-probe` → delete bucket. Harmless, just
+untidy.
 
 ## Fixed defects worth remembering
 

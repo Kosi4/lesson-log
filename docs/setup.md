@@ -1,12 +1,34 @@
 # Setup
 
+## Hosting
+
+The front end is the static files in `web/`. It cannot be served from the
+Supabase `app` function: Supabase rewrites `text/html` to `text/plain` with
+`nosniff` on `functions/v1` URLs (an anti-phishing measure that applies to no
+other content type), so the page always arrives as source text — it cannot
+render, install to a home screen, or register a service worker. The API
+functions are unaffected and stay on Supabase.
+
+To deploy, the Vercel account needs a GitHub Login Connection
+(vercel.com → Settings → Login Connections → Connect GitHub). With that in
+place the project links to `Kosi4/lesson-log` with **root directory `web`** and
+redeploys automatically on every push.
+
+Deploying the files directly instead produces an unclaimed deployment sitting
+behind Vercel's SSO gate, which is unusable from a phone.
+
+To preview locally without deploying:
+
+```bash
+python3 -m http.server 4173 --directory web
+```
+
 ## Turning on notifications (do this once per device)
 
 This is the step that makes the reminders real. Until a device is registered,
 `push_subscriptions` is empty and nothing can be delivered.
 
-1. On the **Android phone**, open
-   https://eyacjldyjxojzpxslkzh.supabase.co/functions/v1/app in Chrome.
+1. On the **Android phone**, open the deployed app URL in Chrome.
 2. Chrome menu → **Add to Home screen**. Launch it from the home screen icon
    from now on — an installed PWA keeps receiving push with the browser closed.
 3. Tap **Enable notifications** in the yellow banner and accept the permission

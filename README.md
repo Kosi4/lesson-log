@@ -4,12 +4,17 @@ A personal daily check-in for the two study sessions on my calendar. Tick each
 session off, jot what I covered, and get nudged if a session goes unlogged —
 so consistency is measurable instead of a feeling.
 
-**Live app:** https://eyacjldyjxojzpxslkzh.supabase.co/functions/v1/app
+**Live app:** not yet hosted — see [docs/setup.md](docs/setup.md#hosting).
 
-Open that on the phone and on the laptop. Both talk to the same database, so a
-tick on one shows up on the other. On Android, add it to the home screen
-(Chrome menu → *Add to Home screen*) so it launches like an app and can receive
-notifications with the browser closed.
+The UI cannot be served from Supabase: Supabase rewrites `text/html` to
+`text/plain` on `functions/v1` URLs, so the page arrives as source text and can
+neither install nor register a service worker. The front end therefore lives in
+`web/` and needs a static host. The four API functions are unaffected.
+
+Once hosted, open the URL on the phone and on the laptop. Both talk to the same
+database, so a tick on one shows up on the other. On Android, add it to the home
+screen (Chrome menu → *Add to Home screen*) so it launches like an app and can
+receive notifications with the browser closed.
 
 ## The daily loop
 
@@ -42,10 +47,16 @@ app  ── serves the PWA (HTML + app.js + sw.js + manifest + icon)
 subscribe ── stores the device's push subscription
 ```
 
+- `web/` — the front end as plain static files. This is what gets deployed.
 - `supabase/functions/_shared/rules.ts` — the only place reminder times, snooze
   length and the weekday rule live. Change them there.
 - `supabase/functions/*/index.ts` — the four edge functions.
 - `supabase/migrations/0001_current_schema.sql` — reference copy of the live schema.
+
+`web/` is generated from the string constants inside
+`supabase/functions/app/index.ts`, which is the original single-file version of
+the UI. That function is now superseded and only kept as the source of truth for
+the markup.
 
 ## Docs
 
