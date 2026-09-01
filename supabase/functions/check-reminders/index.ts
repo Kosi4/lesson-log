@@ -4,7 +4,10 @@ import {
   defaultReminder,
   dueSessions,
   isStudyDay,
+  MAX_SNOOZES,
   sastParts,
+  sessionsToFinalise,
+  snoozeCountOf,
   SNOOZE_MINUTES,
   type LogRow,
   type Session,
@@ -20,11 +23,45 @@ const LABEL: Record<Session, string> = {
   evening: "Evening session (CS)",
 };
 
+/**
+ * Write off anything still pending that has run out of road: days that have
+ * rolled past midnight, and sessions whose six snoozes are spent. Looks back a
+ * fortnight so a few days of downtime still get closed out properly.
+ */
+async function finaliseStale(now: Date) {
+  const since = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { data: rows } = await supabase
+    .from("lesson_log")
+    .select("*")
+    .gte("log_date", since)
+    .or("morning_status.eq.pending,evening_status.eq.pending");
+
+  let closed = 0;
+  for (const row of (rows ?? []) as LogRow[]) {
+    const stale = sessionsToFinalise(row, now);
+    if (stale.length === 0) continue;
+
+    const update: Record<string, unknown> = {};
+    for (const session of stale) {
+      update[`${session}_status`] = "incomplete";
+      update[`${session}_next_reminder`] = null;
+    }
+    await supabase.from("lesson_log").update(update).eq("log_date", row.log_date);
+    closed += stale.length;
+  }
+  return closed;
+}
+
 Deno.serve(async () => {
   const now = new Date();
   const { date, dow } = sastParts(now);
 
-  if (!isStudyDay(dow)) return new Response("weekend, no nagging", { status: 200 });
+  // Runs every day, weekend included: yesterday still needs closing out.
+  const closed = await finaliseStale(now);
+
+  if (!isStudyDay(dow)) {
+    return new Response(`weekend, no nagging (closed ${closed})`, { status: 200 });
+  }
 
   // Seed today's row with both reminder times. ignoreDuplicates keeps an
   // existing row (and any snooze or completed status on it) untouched.
@@ -45,7 +82,7 @@ Deno.serve(async () => {
   if (!row) return new Response("no row", { status: 200 });
 
   const due = dueSessions(row as LogRow, now);
-  if (due.length === 0) return new Response("nothing due", { status: 200 });
+  if (due.length === 0) return new Response(`nothing due (closed ${closed})`, { status: 200 });
 
   const { data: subs } = await supabase.from("push_subscriptions").select("*");
   if (!subs || subs.length === 0) {
@@ -61,11 +98,16 @@ Deno.serve(async () => {
   webpush.setVapidDetails(map.vapid_subject, map.vapid_public_key, map.vapid_private_key);
 
   for (const session of due) {
+    const left = MAX_SNOOZES - snoozeCountOf(row as LogRow, session);
     const payload = JSON.stringify({
       title: `${LABEL[session]} not logged`,
-      body: `Tick it off, snooze ${SNOOZE_MINUTES} min, or mark incomplete.`,
+      body:
+        left > 0
+          ? `Tick it off, snooze ${SNOOZE_MINUTES} min (${left} left), or mark incomplete.`
+          : `Last call — snoozes are used up. Tick it off or it goes down as incomplete.`,
       session,
       date,
+      snoozesLeft: left,
     });
 
     let delivered = 0;
@@ -88,10 +130,12 @@ Deno.serve(async () => {
 
     // Only consume the reminder once it actually reached a device.
     if (delivered > 0) {
-      const field = `${session}_next_reminder`;
-      await supabase.from("lesson_log").update({ [field]: null }).eq("log_date", date);
+      await supabase
+        .from("lesson_log")
+        .update({ [`${session}_next_reminder`]: null })
+        .eq("log_date", date);
     }
   }
 
-  return new Response("sent", { status: 200 });
+  return new Response(`sent (closed ${closed})`, { status: 200 });
 });

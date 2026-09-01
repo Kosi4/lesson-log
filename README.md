@@ -29,11 +29,27 @@ Mon–Fri only. Saturday is the catch-up day and Sunday is off, so neither nags.
 The notification carries three buttons:
 
 - **Mark done** — logs it, no need to open the app
-- **Snooze 30m** — asks again in 30 minutes
+- **Snooze 30m** — asks again in 30 minutes, up to **six times** (three hours of
+  grace). When the sixth runs out the session goes down as incomplete for good.
 - **Mark incomplete** — records that the session did not happen
 
-Marking incomplete is deliberate: a blank day is just missing data, an
-*incomplete* is an honest miss. Only explicit misses count against the streak.
+## Everything closes at 23:59
+
+A day is only editable while it is still that day, in Johannesburg time:
+
+- Anything left unlogged when the date rolls over is **incomplete for good**.
+- A session marked done drops off the dashboard immediately and moves to
+  **Completed lessons** with its date and note. An **Edit** button can undo a
+  mistaken tick, but only until 23:59 — after that it is locked.
+- An incomplete session breaks the streak. Weekends do not: no sessions are
+  scheduled, so there is nothing to miss and the run carries across them.
+
+## Seeing the run
+
+**Streaks** shows the current month as a grid — green when both sessions were
+done, amber for one, red for a miss, muted for days with nothing scheduled.
+Swipe left and right (or use the arrows) to page back through previous months.
+Days before you started tracking are left blank rather than counted as misses.
 
 ## How it fits together
 
@@ -54,10 +70,10 @@ subscribe ── stores the device's push subscription
 - `supabase/functions/*/index.ts` — the four edge functions.
 - `supabase/migrations/0001_current_schema.sql` — reference copy of the live schema.
 
-`web/` is generated from the string constants inside
-`supabase/functions/app/index.ts`, which is the original single-file version of
-the UI. That function is now superseded and only kept as the source of truth for
-the markup.
+`supabase/functions/app/` is the original single-file version of the UI, kept
+only for reference. **It is superseded by `web/` and has diverged from it — do
+not edit it.** Both it and its deployed copy can be cleared out whenever
+convenient; see the follow-up note in [docs/operations.md](docs/operations.md).
 
 ## Docs
 

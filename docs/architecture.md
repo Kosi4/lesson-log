@@ -72,12 +72,28 @@ drift apart between the sender and the responder.
 ```
 pending ──(11:10 passes)──► push sent, *_next_reminder = null
    │                              │
-   │                              ├─ "Snooze 30m"      → *_next_reminder = now + 30m → pending again
-   │                              ├─ "Mark done"       → status = done
-   │                              └─ "Mark incomplete" → status = incomplete
+   │                              ├─ "Snooze 30m"  (< 6 used)  → +30m → pending again
+   │                              ├─ "Snooze 30m"  (6th spent) → incomplete, for good
+   │                              ├─ "Mark done"               → done
+   │                              └─ "Mark incomplete"         → incomplete
    │
-   └─ ticked in the app at any point → status = done / incomplete
+   ├─ ticked in the app at any point → done / incomplete
+   │        └─ "Edit" (same day only) → back to pending
+   │
+   └─ still pending when the date rolls over → incomplete, for good
 ```
+
+Two things make a session final, and both go through `sessionsToFinalise()` in
+`rules.ts`, called by `check-reminders` on every run:
+
+1. **The day closed.** `isLocked()` is a pure date comparison against today in
+   Johannesburg, so nothing has to run at exactly midnight for a day to become
+   read-only — `session-action` rejects writes to past dates with HTTP 409.
+2. **The snooze budget ran out.** Six snoozes, then the session is written off
+   rather than nagged forever.
+
+Non-study days are never written off: nothing was scheduled, so nothing was
+missed.
 
 `*_next_reminder = null` is what stops a notification repeating every 5 minutes.
 It is only cleared **after** a push has actually been delivered to at least one

@@ -79,6 +79,13 @@ Supabase magic-link auth, a `user_id` column on `lesson_log` and
 it is roughly the size of everything built so far. Until then, treat the app URL
 as semi-private and do not post it publicly.
 
+### Retire the superseded `app` edge function
+
+`supabase/functions/app/` and its deployed counterpart served the UI before it
+moved to `web/`. The two have since diverged, so the stale copy is a trap: an
+edit there would look correct and change nothing users see. Drop the directory
+from the repo and remove the `app` function in the Supabase dashboard.
+
 ### Remove the leftover `ctype-probe` storage bucket
 
 An empty public storage bucket named `ctype-probe` was created while testing

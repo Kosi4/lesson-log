@@ -11,139 +11,303 @@ const headers = {
   "Content-Type": "application/json",
 };
 
+const SESSIONS = [
+  { key: "morning", label: "Morning session", when: "Math — 10:00, nudge at 11:10" },
+  { key: "evening", label: "Evening session", when: "CS — 17:30, nudge at 20:00" },
+];
+
+// South Africa is UTC+2 year round, so a fixed offset is safe.
+const SAST_OFFSET_MS = 2 * 60 * 60 * 1000;
+
 function todaySAST() {
-  const now = new Date();
-  const sast = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-  return sast.toISOString().slice(0, 10);
+  return new Date(Date.now() + SAST_OFFSET_MS).toISOString().slice(0, 10);
 }
 
-function dateOffsetSAST(offset) {
-  const now = new Date();
-  const sast = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-  sast.setUTCDate(sast.getUTCDate() - offset);
-  return sast.toISOString().slice(0, 10);
+function isStudyDate(date) {
+  const dow = new Date(date + "T00:00:00Z").getUTCDay();
+  return dow >= 1 && dow <= 5;
 }
 
-async function fetchLastNDays(n) {
-  const oldest = dateOffsetSAST(n - 1);
-  const res = await fetch(
-    REST + "/lesson_log?log_date=gte." + oldest + "&order=log_date.desc",
-    { headers }
-  );
-  return res.json();
+function prettyDate(date) {
+  return new Date(date + "T00:00:00Z").toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 }
 
-async function upsertToday(session, action, note) {
-  const date = todaySAST();
-  await fetch(SESSION_ACTION_URL, {
+let rows = [];
+let byDate = new Map();
+let firstTracked = null; // earliest logged day; nothing before it is a "miss"
+let calCursor = null; // {year, month} of the month on screen
+
+async function fetchAll() {
+  const res = await fetch(REST + "/lesson_log?order=log_date.desc", { headers });
+  rows = await res.json();
+  byDate = new Map(rows.map((r) => [r.log_date, r]));
+  firstTracked = rows.length ? rows[rows.length - 1].log_date : todaySAST();
+}
+
+async function act(date, session, action, note) {
+  const res = await fetch(SESSION_ACTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ date, session, action, note }),
   });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(body.message || "That change could not be saved.");
+  }
+  await refresh();
 }
 
-function computeStats(rows) {
+/* ---------- stats ---------- */
+
+function statusOf(row, key) {
+  return row ? row[key + "_status"] : "pending";
+}
+
+function computeStreak() {
+  const today = todaySAST();
+  const cursor = new Date(today + "T00:00:00Z");
   let streak = 0;
-  const byDate = {};
-  rows.forEach((r) => (byDate[r.log_date] = r));
-  let offset = 0;
-  const today = todaySAST();
-  while (true) {
-    const d = dateOffsetSAST(offset);
-    const row = byDate[d];
-    const bothDone = row && row.morning_status === "done" && row.evening_status === "done";
-    const bothResolved = row && row.morning_status !== "pending" && row.evening_status !== "pending";
-    if (d === today && !bothResolved) {
-      offset++;
-      continue;
-    }
-    if (bothDone) {
-      streak++;
-      offset++;
-    } else {
-      break;
-    }
-  }
 
-  let weekDone = 0;
-  for (let i = 0; i < 14; i++) {
-    const row = byDate[dateOffsetSAST(i)];
-    if (row) {
-      if (row.morning_status === "done") weekDone++;
-      if (row.evening_status === "done") weekDone++;
-    }
-  }
+  for (let i = 0; i < 400; i++) {
+    const date = cursor.toISOString().slice(0, 10);
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+    if (!isStudyDate(date)) continue; // weekends carry the streak
 
+    const row = byDate.get(date);
+    const m = statusOf(row, "morning");
+    const e = statusOf(row, "evening");
+
+    // An unfinished today neither extends nor breaks the run.
+    if (date === today && (m === "pending" || e === "pending")) continue;
+
+    if (m === "done" && e === "done") streak++;
+    else break;
+  }
+  return streak;
+}
+
+function renderStats() {
+  const month = todaySAST().slice(0, 7);
+  let monthDone = 0;
   let total = 0;
-  rows.forEach((r) => {
-    if (r.morning_status === "done") total++;
-    if (r.evening_status === "done") total++;
-  });
-
-  return { streak, weekDone, total };
+  for (const r of rows) {
+    for (const s of SESSIONS) {
+      if (r[s.key + "_status"] === "done") {
+        total++;
+        if (r.log_date.startsWith(month)) monthDone++;
+      }
+    }
+  }
+  document.getElementById("streak").textContent = computeStreak();
+  document.getElementById("month-done").textContent = monthDone;
+  document.getElementById("total").textContent = total;
 }
 
-function render(rows) {
-  const stats = computeStats(rows);
-  document.getElementById("streak").textContent = stats.streak;
-  document.getElementById("week").textContent = stats.weekDone + "/28";
-  document.getElementById("total").textContent = stats.total;
+/* ---------- today ---------- */
 
-  const byDate = {};
-  rows.forEach((r) => (byDate[r.log_date] = r));
+function renderToday() {
   const today = todaySAST();
-  const todayRow = byDate[today];
+  const row = byDate.get(today);
+  const host = document.getElementById("today");
+  host.innerHTML = "";
 
-  ["morning", "evening"].forEach((session) => {
-    const status = todayRow ? todayRow[session + "_status"] : "pending";
-    const doneBtn = document.getElementById(session + "-done");
-    const cancelBtn = document.getElementById(session + "-cancel");
-    const noteInput = document.getElementById(session + "-note");
-    if (todayRow && todayRow[session + "_note"]) noteInput.value = todayRow[session + "_note"];
-    doneBtn.textContent = status === "done" ? "Done" : "Mark done";
-    cancelBtn.textContent = status === "incomplete" ? "Marked incomplete" : "Mark incomplete";
-  });
+  if (!isStudyDate(today)) {
+    host.innerHTML = '<div class="card"><p class="empty">No sessions scheduled today. Enjoy it.</p></div>';
+    return;
+  }
 
-  const list = document.getElementById("log-list");
-  list.innerHTML = "";
-  for (let i = 0; i < 14; i++) {
-    const d = dateOffsetSAST(i);
-    const row = byDate[d];
-    const div = document.createElement("div");
-    div.className = "log-row";
-    const label = i === 0 ? "Today" : i === 1 ? "Yesterday" : d;
-    const m = row ? row.morning_status : "pending";
-    const e = row ? row.evening_status : "pending";
-    const color = (s) => (s === "done" ? "#1D9E75" : s === "incomplete" ? "#D85A30" : "#ccc");
-    div.innerHTML =
-      '<span class="dot" style="background:' + color(m) + '"></span>' +
-      '<span class="dot" style="background:' + color(e) + '"></span>' +
-      "<span>" + label + "</span>";
-    list.appendChild(div);
+  const pending = SESSIONS.filter((s) => statusOf(row, s.key) === "pending");
+  const settled = SESSIONS.filter((s) => statusOf(row, s.key) !== "pending");
+
+  // Anything still open gets a full card with a note field.
+  for (const s of pending) {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML =
+      "<h2>" + s.label + "</h2>" +
+      '<p class="when">' + s.when + "</p>" +
+      '<input type="text" placeholder="What did you cover? (optional)" />' +
+      '<div class="row">' +
+      '<button class="primary" data-act="done">Mark done</button>' +
+      '<button data-act="cancel">Mark incomplete</button>' +
+      "</div>";
+    const input = card.querySelector("input");
+    if (row && row[s.key + "_note"]) input.value = row[s.key + "_note"];
+    card.querySelector('[data-act="done"]').onclick = () =>
+      act(today, s.key, "done", input.value.trim());
+    card.querySelector('[data-act="cancel"]').onclick = () => act(today, s.key, "cancel");
+    host.appendChild(card);
+  }
+
+  // Resolved sessions drop off the dashboard into a compact strip that stays
+  // editable until the day closes at 23:59.
+  if (settled.length) {
+    const card = document.createElement("div");
+    card.className = "card";
+    for (const s of settled) {
+      const status = statusOf(row, s.key);
+      const note = row[s.key + "_note"];
+      const line = document.createElement("div");
+      line.className = "settled";
+      line.innerHTML =
+        '<div class="body"><div class="head">' + s.label + "</div>" +
+        (note ? '<div class="sub">' + escapeHtml(note) + "</div>" : "") +
+        "</div>" +
+        '<span class="pill ' + status + '">' + (status === "done" ? "Done" : "Incomplete") + "</span>";
+      const edit = document.createElement("button");
+      edit.className = "link";
+      edit.textContent = "Edit";
+      edit.onclick = () => act(today, s.key, "edit");
+      line.appendChild(edit);
+      card.appendChild(line);
+    }
+    const note = document.createElement("p");
+    note.className = "locked-note";
+    note.textContent = "Editable until 23:59 today, then locked for good.";
+    card.appendChild(note);
+    host.appendChild(card);
+  }
+
+  if (!pending.length && !settled.length) {
+    host.innerHTML = '<div class="card"><p class="empty">Nothing logged yet today.</p></div>';
   }
 }
 
-async function refresh() {
-  const rows = await fetchLastNDays(14);
-  render(rows);
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+  );
 }
 
-document.getElementById("morning-done").addEventListener("click", async () => {
-  await upsertToday("morning", "done", document.getElementById("morning-note").value.trim());
-  refresh();
-});
-document.getElementById("morning-cancel").addEventListener("click", async () => {
-  await upsertToday("morning", "cancel");
-  refresh();
-});
-document.getElementById("evening-done").addEventListener("click", async () => {
-  await upsertToday("evening", "done", document.getElementById("evening-note").value.trim());
-  refresh();
-});
-document.getElementById("evening-cancel").addEventListener("click", async () => {
-  await upsertToday("evening", "cancel");
-  refresh();
-});
+/* ---------- month grid ---------- */
+
+function dayClass(date) {
+  const today = todaySAST();
+  if (date > today) return "day";
+  // Days before tracking began were never missed — there was nothing to log.
+  if (firstTracked && date < firstTracked) return "day";
+  if (!isStudyDate(date)) return "day offday";
+
+  const row = byDate.get(date);
+  const m = statusOf(row, "morning");
+  const e = statusOf(row, "evening");
+  const done = (m === "done" ? 1 : 0) + (e === "done" ? 1 : 0);
+
+  if (done === 2) return "day full";
+  if (date === today && (m === "pending" || e === "pending")) return "day";
+  if (done === 1) return "day partial";
+  return "day missed";
+}
+
+function renderCalendar() {
+  const { year, month } = calCursor;
+  const grid = document.getElementById("cal-grid");
+  const first = new Date(Date.UTC(year, month, 1));
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  // Monday-first: JS getUTCDay() is 0=Sun.
+  const lead = (first.getUTCDay() + 6) % 7;
+
+  document.getElementById("cal-title").textContent = first.toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+
+  grid.innerHTML = "";
+  for (const d of ["M", "T", "W", "T", "F", "S", "S"]) {
+    const el = document.createElement("div");
+    el.className = "dow";
+    el.textContent = d;
+    grid.appendChild(el);
+  }
+  for (let i = 0; i < lead; i++) {
+    const el = document.createElement("div");
+    el.className = "day blank";
+    grid.appendChild(el);
+  }
+
+  const today = todaySAST();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date =
+      year + "-" + String(month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+    const el = document.createElement("div");
+    el.className = dayClass(date) + (date === today ? " today" : "");
+    el.innerHTML = '<span class="n">' + d + "</span>";
+    el.title = date;
+    grid.appendChild(el);
+  }
+
+  // Never scroll past the current month.
+  const now = new Date(todaySAST() + "T00:00:00Z");
+  const atCurrent = year === now.getUTCFullYear() && month === now.getUTCMonth();
+  document.getElementById("cal-next").disabled = atCurrent;
+}
+
+function shiftMonth(delta) {
+  const d = new Date(Date.UTC(calCursor.year, calCursor.month + delta, 1));
+  const now = new Date(todaySAST() + "T00:00:00Z");
+  if (d > new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))) return;
+  calCursor = { year: d.getUTCFullYear(), month: d.getUTCMonth() };
+  renderCalendar();
+}
+
+function wireCalendar() {
+  document.getElementById("cal-prev").onclick = () => shiftMonth(-1);
+  document.getElementById("cal-next").onclick = () => shiftMonth(1);
+
+  // Swipe left/right through months on touch devices.
+  const grid = document.getElementById("cal-grid");
+  let startX = null;
+  let startY = null;
+  grid.addEventListener("touchstart", (e) => {
+    startX = e.changedTouches[0].clientX;
+    startY = e.changedTouches[0].clientY;
+  }, { passive: true });
+  grid.addEventListener("touchend", (e) => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    startX = startY = null;
+    // Ignore mostly-vertical drags so page scrolling still works.
+    if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy)) return;
+    shiftMonth(dx < 0 ? 1 : -1);
+  }, { passive: true });
+}
+
+/* ---------- completed archive ---------- */
+
+function renderCompleted() {
+  const host = document.getElementById("completed");
+  const entries = [];
+  for (const r of rows) {
+    for (const s of SESSIONS) {
+      if (r[s.key + "_status"] === "done") {
+        entries.push({ date: r.log_date, label: s.label, note: r[s.key + "_note"] });
+      }
+    }
+  }
+  entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+
+  if (!entries.length) {
+    host.innerHTML = '<p class="empty">Nothing completed yet. Tick a session off and it lands here.</p>';
+    return;
+  }
+
+  host.innerHTML = entries
+    .map(
+      (e) =>
+        '<div class="settled"><div class="body">' +
+        '<div class="head">' + prettyDate(e.date) + " · " + e.label + "</div>" +
+        (e.note ? '<div class="sub">' + escapeHtml(e.note) + "</div>" : "") +
+        '</div><span class="pill done">Done</span></div>'
+    )
+    .join("");
+}
+
+/* ---------- push ---------- */
 
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -188,5 +352,24 @@ async function setupPush() {
   });
 }
 
-refresh();
-setupPush();
+/* ---------- boot ---------- */
+
+async function refresh() {
+  await fetchAll();
+  renderStats();
+  renderToday();
+  renderCompleted();
+  renderCalendar();
+}
+
+(async function init() {
+  const now = new Date(todaySAST() + "T00:00:00Z");
+  calCursor = { year: now.getUTCFullYear(), month: now.getUTCMonth() };
+  wireCalendar();
+  await refresh();
+  setupPush();
+  // Acting on a notification updates the database, not this tab.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refresh();
+  });
+})();
