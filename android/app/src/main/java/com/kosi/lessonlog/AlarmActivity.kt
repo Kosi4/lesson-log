@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,7 +51,7 @@ class AlarmActivity : ComponentActivity() {
         getSystemService(NotificationManager::class.java).cancel(session.notificationId())
 
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
+            LessonLogTheme {
                 AlarmScreen(
                     session = session,
                     snoozesLeft = snoozesLeft,
@@ -124,6 +125,6 @@ private fun AlarmScreen(session: Session, snoozesLeft: Int, onAction: (String) -
             onClick = { busy = true; onAction("cancel") },
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
-        ) { Text("Mark incomplete", color = Color(0xFFD85A30)) }
+        ) { Text("Mark incomplete", color = Palette.Red) }
     }
 }
