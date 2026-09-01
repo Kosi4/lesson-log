@@ -24,8 +24,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Lesson log";
   const options = {
     body: data.body || "",
-    icon: "./icon.png",
-    badge: "./icon.png",
+    icon: "./icon-192.png",
+    badge: "./icon-192.png",
     tag: "session-" + data.session + "-" + data.date,
     data: { session: data.session, date: data.date },
     // A reminder that sits silently in the status bar is useless. Vibration and
@@ -72,8 +72,8 @@ async function sendAction(info, action) {
 
   await self.registration.showNotification("Couldn't save that", {
     body: "Tap to open Lesson Log and log the session yourself.",
-    icon: "./icon.png",
-    badge: "./icon.png",
+    icon: "./icon-192.png",
+    badge: "./icon-192.png",
     tag: "action-failed",
     requireInteraction: true,
     vibrate: [300, 120, 300],

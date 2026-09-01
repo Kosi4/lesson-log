@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The split day mark: the same shape the streak grid draws for every day.
+  Top half solid = morning logged, bottom half open = evening still to log.
+  Artwork spans 30..78 on the 108 canvas, inside the 66dp adaptive safe zone.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Morning: filled -->
+    <path
+        android:fillColor="#1A7A53"
+        android:pathData="M40,30 h28 a10,10 0 0 1 10,10 v13 h-48 v-13 a10,10 0 0 1 10,-10 z" />
+
+    <!-- Evening: open, drawn as an outline so the two halves read as one cell -->
+    <path
+        android:strokeColor="#1A7A53"
+        android:strokeWidth="4"
+        android:fillColor="#00000000"
+        android:pathData="M32,57 v11 a8,8 0 0 0 8,8 h28 a8,8 0 0 0 8,-8 v-11" />
+</vector>

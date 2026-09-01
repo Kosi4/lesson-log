@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 13 themed icons tint a single silhouette, so this layer carries the
+  mark in one flat colour. The system supplies the colour; the shape alone has
+  to read.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#000000"
+        android:pathData="M40,30 h28 a10,10 0 0 1 10,10 v13 h-48 v-13 a10,10 0 0 1 10,-10 z" />
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="4"
+        android:fillColor="#00000000"
+        android:pathData="M32,57 v11 a8,8 0 0 0 8,8 h28 a8,8 0 0 0 8,-8 v-11" />
+</vector>

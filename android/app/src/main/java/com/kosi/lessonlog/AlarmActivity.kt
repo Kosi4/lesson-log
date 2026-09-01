@@ -125,6 +125,6 @@ private fun AlarmScreen(session: Session, snoozesLeft: Int, onAction: (String) -
             onClick = { busy = true; onAction("cancel") },
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
-        ) { Text("Mark incomplete", color = Palette.Red) }
+        ) { Text("Mark incomplete", color = LessonTheme.colors.missed) }
     }
 }

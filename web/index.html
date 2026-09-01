@@ -5,84 +5,196 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Lesson Log</title>
 <link rel="manifest" href="./manifest.json" />
-<meta name="theme-color" content="#111111" />
+<link rel="icon" href="./favicon.png" type="image/png" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<meta name="theme-color" content="#F2F1EC" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#161714" media="(prefers-color-scheme: dark)" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;500&family=Fira+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, system-ui, sans-serif;
-    background: #f4f3ef;
-    color: #1a1a1a;
-    padding: 20px 16px 48px;
-    max-width: 620px;
-    margin: 0 auto;
+  :root {
+    --ground: #F2F1EC;
+    --sheet: #FFFFFF;
+    --ink: #191A17;
+    --ink-muted: #5F625B;
+    --rule: #E3E2DB;
+    --done: #1A7A53;
+    --missed: #B4482A;
+    --empty: #DEDCD2;
+    --on-status: #FFFFFF;
+    --pill-done-bg: #E3F1E9;
+    --pill-done-ink: #14603F;
+    --pill-miss-bg: #F7E4DC;
+    --pill-miss-ink: #8C3A22;
   }
-  h1 { font-size: 20px; font-weight: 600; margin: 4px 0 20px; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-  .stat { background: #fff; border-radius: 10px; padding: 12px; }
-  .stat p:first-child { font-size: 12px; color: #666; margin: 0 0 4px; }
-  .stat p:last-child { font-size: 20px; font-weight: 600; margin: 0; }
-  .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
-  .card h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
-  .card .when { font-size: 12px; color: #888; margin: 0 0 10px; }
-  .card input[type=text] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 10px; }
-  .row { display: flex; gap: 8px; }
-  button { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
-  button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
-  button.link { flex: 0 0 auto; border: none; background: none; color: #6b6b6b; text-decoration: underline; padding: 4px 0; font-size: 12px; }
-  .push-banner { background: #fff3d6; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; font-size: 13px; display: none; }
-  .push-banner button { margin-top: 8px; }
-  .section-title { font-size: 12px; color: #666; margin: 24px 0 8px; text-transform: uppercase; letter-spacing: .04em; }
 
-  .settled { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eee; }
-  .settled:last-child { border-bottom: none; }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #161714;
+      --sheet: #1E201C;
+      --ink: #EDEDE8;
+      --ink-muted: #9A9E95;
+      --rule: #2C2F29;
+      --done: #3FB183;
+      --missed: #D4674A;
+      --empty: #303329;
+      --on-status: #10120F;
+      --pill-done-bg: #1D3A2D;
+      --pill-done-ink: #7FD3AC;
+      --pill-miss-bg: #3B241B;
+      --pill-miss-ink: #EDA087;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0 auto;
+    max-width: 620px;
+    padding: 24px 16px 48px;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Fira Sans", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    /* Numbers must not shift width as the log fills in. */
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 20px; }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin: 26px 0 8px;
+  }
+
+  .card { background: var(--sheet); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .card h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
+  .when { font-size: 12px; color: var(--ink-muted); margin: 0 0 12px; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 4px; }
+  .stat { background: var(--sheet); border-radius: 10px; padding: 12px; }
+  .stat p:first-child { font-size: 11px; color: var(--ink-muted); margin: 0 0 4px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .stat p:last-child { font-family: "Fira Mono", ui-monospace, monospace; font-size: 22px; font-weight: 500; margin: 0; }
+
+  input[type=text] {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    font: inherit;
+    font-size: 14px;
+    background: var(--sheet);
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+  input[type=text]:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; border-color: transparent; }
+
+  .row { display: flex; gap: 8px; }
+  button {
+    flex: 1;
+    min-height: 44px;
+    padding: 11px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--sheet);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+  button:hover { border-color: var(--ink-muted); }
+  button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  button.primary { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+  button.primary:hover { opacity: 0.9; }
+  button.link {
+    flex: 0 0 auto; min-height: 0; border: none; background: none;
+    color: var(--ink-muted); text-decoration: underline; padding: 4px 0 4px 10px; font-size: 12px;
+  }
+
+  .push-banner { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; margin-bottom: 16px; font-size: 13px; display: none; }
+  .push-banner button { margin-top: 10px; }
+
+  .settled { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+  .settled:last-of-type { border-bottom: none; }
   .settled .body { flex: 1; min-width: 0; }
   .settled .head { font-size: 14px; font-weight: 500; }
-  .settled .sub { font-size: 12px; color: #888; margin-top: 2px; word-break: break-word; }
-  .pill { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
-  .pill.done { background: #e3f5ec; color: #14724f; }
-  .pill.incomplete { background: #fbe6dd; color: #9c3d17; }
-  .locked-note { font-size: 12px; color: #999; margin: 8px 0 0; }
-  .empty { font-size: 13px; color: #888; margin: 0; }
+  .settled .sub { font-size: 12px; color: var(--ink-muted); margin-top: 2px; word-break: break-word; }
+  .pill { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; flex-shrink: 0; }
+  .pill.done { background: var(--pill-done-bg); color: var(--pill-done-ink); }
+  .pill.incomplete { background: var(--pill-miss-bg); color: var(--pill-miss-ink); }
+  .locked-note { font-size: 12px; color: var(--ink-muted); margin: 10px 0 0; }
+  .empty { font-size: 13px; color: var(--ink-muted); margin: 0; }
 
-  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .cal-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
   .cal-nav { display: flex; gap: 6px; }
-  .cal-nav button { flex: 0 0 auto; width: 34px; padding: 6px 0; font-size: 15px; line-height: 1; }
-  .cal-nav button[disabled] { opacity: .3; cursor: default; }
+  .cal-nav button { flex: 0 0 auto; width: 36px; min-height: 34px; padding: 0; font-size: 15px; }
+  .cal-nav button[disabled] { opacity: 0.35; cursor: default; }
+
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; touch-action: pan-y; }
-  .dow { font-size: 10px; color: #999; text-align: center; padding-bottom: 2px; }
-  .day { aspect-ratio: 1; border-radius: 7px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; background: #f0efeb; color: #b0aca4; }
-  .day .n { font-weight: 600; }
+  .dow { font-family: "Fira Mono", monospace; font-size: 10px; color: var(--ink-muted); text-align: center; padding-bottom: 4px; }
+
+  /* One cell, split in two: morning above, evening below. */
+  .day { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--empty); }
   .day.blank { background: none; }
-  .day.offday { background: #f7f6f3; color: #cbc7bf; }
-  .day.full { background: #1D9E75; color: #fff; }
-  .day.partial { background: #E8B84B; color: #4a3a08; }
-  .day.missed { background: #D85A30; color: #fff; }
-  .day.today { outline: 2px solid #1a1a1a; outline-offset: 1px; }
-  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 11px; color: #777; }
+  .day.offday { background: none; }
+  .day.offday .n { opacity: 0.45; }
+  .day .half { position: absolute; left: 0; right: 0; height: 50%; }
+  .day .half.am { top: 0; }
+  .day .half.pm { bottom: 0; }
+  .day .half.done { background: var(--done); }
+  .day .half.incomplete { background: var(--missed); }
+  .day .half.pending { background: var(--empty); }
+  .day .half.pm { border-top: 1px solid var(--ground); }
+  .day .n {
+    position: absolute; top: 3px; left: 0; right: 0;
+    text-align: center;
+    font-family: "Fira Mono", monospace; font-size: 10px; font-weight: 500;
+    color: var(--ink-muted);
+  }
+  /* The numeral sits over the morning half only, so its contrast depends on
+     that one colour rather than on a blend. */
+  .day .n.on-status { color: var(--on-status); }
+  .day.today { box-shadow: inset 0 0 0 2px var(--ink); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; font-size: 11px; color: var(--ink-muted); }
   .legend span { display: flex; align-items: center; gap: 5px; }
-  .swatch { width: 10px; height: 10px; border-radius: 3px; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  .apk { display: block; text-align: center; padding: 12px; border-radius: 8px; background: var(--ink); color: var(--ground); text-decoration: none; font-size: 13px; font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
 </style>
 </head>
 <body>
   <h1>Lesson log</h1>
 
   <div id="push-banner" class="push-banner">
-    Notifications aren't enabled yet - turn them on to get nudged if a session goes unlogged.
-    <button id="enable-push" class="primary">Enable notifications</button>
+    Notifications are off. Turn them on to get nudged when a session goes unlogged.
+    <button id="enable-push" class="primary">Turn on notifications</button>
   </div>
 
   <div class="stats">
     <div class="stat"><p>Streak</p><p id="streak">0</p></div>
     <div class="stat"><p>This month</p><p id="month-done">0</p></div>
-    <div class="stat"><p>Total done</p><p id="total">0</p></div>
+    <div class="stat"><p>Total</p><p id="total">0</p></div>
   </div>
 
   <p class="section-title">Today</p>
   <div id="today"></div>
 
-  <p class="section-title">Streaks</p>
+  <p class="section-title">Register</p>
   <div class="card">
     <div class="cal-head">
       <h2 id="cal-title">—</h2>
@@ -93,31 +205,28 @@
     </div>
     <div class="cal-grid" id="cal-grid"></div>
     <div class="legend">
-      <span><i class="swatch" style="background:#1D9E75"></i>Both done</span>
-      <span><i class="swatch" style="background:#E8B84B"></i>One done</span>
-      <span><i class="swatch" style="background:#D85A30"></i>Missed</span>
-      <span><i class="swatch" style="background:#f7f6f3;border:1px solid #e5e2db"></i>No sessions</span>
+      <span><i class="swatch" style="background:var(--done)"></i>Done</span>
+      <span><i class="swatch" style="background:var(--missed)"></i>Missed</span>
+      <span><i class="swatch" style="background:var(--empty)"></i>Not logged</span>
+      <span><i class="swatch" style="background:none;border:1px solid var(--rule)"></i>No sessions</span>
     </div>
-  </div>
-
-  <p class="section-title">Android app</p>
-  <div class="card">
-    <p class="empty" style="margin-bottom:10px;">
-      Reminders that actually take over the screen, using local alarms instead of
-      web push. Same log, same data.
-    </p>
-    <a href="./lesson-log.apk" download
-       style="display:block;text-align:center;padding:12px;border-radius:8px;background:#1a1a1a;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">
-      Download the Android app
-    </a>
-    <p class="locked-note">
-      Chrome will warn about installing outside the Play Store &mdash; choose
-      &ldquo;Download anyway&rdquo;, then open the file and allow installs from Chrome.
-    </p>
   </div>
 
   <p class="section-title">Completed lessons</p>
   <div class="card" id="completed"></div>
+
+  <p class="section-title">Android app</p>
+  <div class="card">
+    <p class="empty" style="margin-bottom:12px;">
+      Reminders that take over the screen, using local alarms instead of web push.
+      Same log, same data.
+    </p>
+    <a href="./lesson-log.apk" download class="apk">Download the Android app</a>
+    <p class="locked-note">
+      Chrome warns about installing outside the Play Store &mdash; choose
+      &ldquo;Download anyway&rdquo;, then open the file and allow installs from Chrome.
+    </p>
+  </div>
 
   <script src="./app.js"></script>
 </body>

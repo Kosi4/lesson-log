@@ -185,22 +185,48 @@ function escapeHtml(s) {
 
 /* ---------- month grid ---------- */
 
-function dayClass(date) {
+/**
+ * One day is one cell split in two: morning above, evening below. Colouring the
+ * halves separately keeps which session was missed, which a single blended
+ * colour threw away.
+ */
+function dayCell(date) {
   const today = todaySAST();
-  if (date > today) return "day";
-  // Days before tracking began were never missed — there was nothing to log.
-  if (firstTracked && date < firstTracked) return "day";
-  if (!isStudyDate(date)) return "day offday";
+  const el = document.createElement("div");
+  el.title = date;
+
+  const untracked =
+    date > today || (firstTracked && date < firstTracked);
+  const offday = !isStudyDate(date);
+
+  const number = document.createElement("span");
+  number.className = "n";
+  number.textContent = Number(date.slice(8, 10));
+
+  if (untracked || offday) {
+    // Weekends read as off-days even before they arrive, so the shape of the
+    // term is visible ahead of time rather than only in hindsight.
+    el.className = "day" + (offday ? " offday" : "");
+    el.appendChild(number);
+    return el;
+  }
 
   const row = byDate.get(date);
-  const m = statusOf(row, "morning");
-  const e = statusOf(row, "evening");
-  const done = (m === "done" ? 1 : 0) + (e === "done" ? 1 : 0);
+  const am = statusOf(row, "morning");
+  const pm = statusOf(row, "evening");
 
-  if (done === 2) return "day full";
-  if (date === today && (m === "pending" || e === "pending")) return "day";
-  if (done === 1) return "day partial";
-  return "day missed";
+  el.className = "day";
+  for (const [session, status] of [["am", am], ["pm", pm]]) {
+    const half = document.createElement("div");
+    half.className = "half " + session + " " + status;
+    el.appendChild(half);
+  }
+
+  // The numeral sits over the morning half, so its contrast is decided by that
+  // half alone rather than by whatever the two happen to blend into.
+  if (am === "done" || am === "incomplete") number.classList.add("on-status");
+  el.appendChild(number);
+  return el;
 }
 
 function renderCalendar() {
@@ -233,10 +259,8 @@ function renderCalendar() {
   for (let d = 1; d <= daysInMonth; d++) {
     const date =
       year + "-" + String(month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
-    const el = document.createElement("div");
-    el.className = dayClass(date) + (date === today ? " today" : "");
-    el.innerHTML = '<span class="n">' + d + "</span>";
-    el.title = date;
+    const el = dayCell(date);
+    if (date === today) el.classList.add("today");
     grid.appendChild(el);
   }
 
